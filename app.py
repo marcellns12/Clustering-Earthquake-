@@ -31,6 +31,10 @@ if uploaded_file is not None:
                     df[col] = df[col].fillna(-1).astype(int).astype(str)
                     df[col] = df[col].replace('-1', 'N/A')
 
+            # Pastikan latitude & longitude float
+            df['latitude'] = df['latitude'].astype(float)
+            df['longitude'] = df['longitude'].astype(float)
+
     except Exception as e:
         st.error(f"Gagal memproses file. Pastikan format CSV sudah benar. Error: {e}")
         st.stop()
@@ -58,20 +62,20 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
     
     color_col = 'dbscan_cluster' if 'dbscan_cluster' in filtered_df.columns else 'cluster'
 
+    hover_cols = {
+        "latitude": ':.2f',
+        "longitude": ':.2f',
+        "cluster": True,
+        "dbscan_cluster": True
+    }
+
     fig_map = px.scatter_mapbox(
         filtered_df,
         lat="latitude",
         lon="longitude",
         color=color_col,
         hover_name="cluster",
-        hover_data={
-            "latitude": ':.2f',
-            "longitude": ':.2f',
-            "cluster": True,
-            "dbscan_cluster": True,
-            "mag": True if 'mag' in filtered_df.columns else False,
-            "depth": True if 'depth' in filtered_df.columns else False
-        },
+        hover_data=hover_cols,
         zoom=2,
         height=800,
         title="Distribusi Gempa Bumi Berdasarkan Cluster di Dunia Nyata"
