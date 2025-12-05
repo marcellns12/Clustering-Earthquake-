@@ -10,7 +10,7 @@ st.title("DBSCAN Clustering - Dataset Gempa")
 
 # Load dataset
 DATA_PATH = "gempa_sample.csv"
-MODEL_PATH = "dbscan_model.pkl"
+MODEL_PATH = "model_clustering_optimal.pkl"
 
 @st.cache_data
 def load_data():
