@@ -5,13 +5,13 @@ import plotly.express as px
 # Konfigurasi halaman
 st.set_page_config(
     page_title="Visualisasi Data Gempa Bumi",
-    layout="wide", # Pastikan layout wide untuk memanfaatkan lebar layar
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # --- Judul Aplikasi ---
 st.title("Visualisasi Data Gempa Bumi 🌍")
-st.markdown("Unggah file CSV Anda (`gempa_clustered_full.csv`) untuk memulai visualisasi.")
+st.markdown("Visualisasi hanya menggunakan data lokasi (`latitude`, `longitude`) dan hasil clustering (`cluster`, `dbscan_cluster`).")
 
 # --- Sidebar untuk Unggah dan Filter ---
 st.sidebar.header("Unggah File Data")
@@ -30,6 +30,7 @@ if uploaded_file is not None:
             # Konversi kolom cluster dan dbscan_cluster menjadi string agar mudah difilter
             for col in ['cluster', 'dbscan_cluster']:
                 if col in df.columns:
+                    # Mengisi NaN/Null (-1 sementara) lalu konversi ke string
                     df[col] = df[col].fillna(-1).astype(int).astype(str)
                     df[col] = df[col].replace('-1', 'N/A')
 
@@ -44,11 +45,11 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
 
     # Filter Cluster
     cluster_options = ['Semua'] + sorted(df['cluster'].unique().tolist())
-    selected_cluster = st.sidebar.selectbox("Filter berdasarkan 'cluster':", cluster_options)
+    selected_cluster = st.sidebar.selectbox("Filter berdasarkan 'cluster' (K-Means):", cluster_options)
 
     # Filter DBSCAN Cluster
     dbscan_options = ['Semua'] + sorted(df['dbscan_cluster'].unique().tolist())
-    selected_dbscan = st.sidebar.selectbox("Filter berdasarkan 'dbscan_cluster':", dbscan_options)
+    selected_dbscan = st.sidebar.selectbox("Filter berdasarkan 'dbscan_cluster' (DBSCAN):", dbscan_options)
 
     # Terapkan Filter
     filtered_df = df.copy()
@@ -62,12 +63,11 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
     st.sidebar.markdown(f"**Total Data Awal:** {len(df)}")
 
     # ---------------------------------------------
-    # --- Bagian Utama: Visualisasi (Satu Kolom Lebar) ---
+    # --- Peta Persebaran Gempa (Lebar Penuh) ---
     # ---------------------------------------------
     
-    # --- Peta Persebaran Gempa (Lebar Penuh & Tinggi Diperbesar) ---
-    st.header("Peta Persebaran Gempa")
-    st.markdown("Visualisasi lokasi gempa berdasarkan Longitude dan Latitude.")
+    st.header("1. Peta Persebaran Gempa")
+    st.markdown("Setiap titik mewakili lokasi gempa dan diwarnai berdasarkan hasil DBSCAN Cluster.")
     
     color_col = 'dbscan_cluster' if 'dbscan_cluster' in filtered_df.columns else 'cluster'
     
@@ -75,19 +75,17 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
         filtered_df,
         lat="latitude",
         lon="longitude",
-        color=color_col if color_col in filtered_df.columns else None,
+        color=color_col, # Warna berdasarkan dbscan_cluster
         hover_name="cluster",
         hover_data={
-            "mag": True,
-            "depth": True,
             "latitude": ':.2f',
             "longitude": ':.2f',
             "cluster": True,
             "dbscan_cluster": True
         },
         zoom=2,
-        height=800, # Tinggi peta ditingkatkan dari 600 menjadi 800
-        title="Persebaran Gempa Berdasarkan Lokasi dan Cluster (Lebar Penuh)"
+        height=800,
+        title="Persebaran Lokasi Gempa Berdasarkan Cluster"
     )
 
     fig_map.update_layout(mapbox_style="carto-positron")
@@ -96,43 +94,53 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
     st.plotly_chart(fig_map, use_container_width=True)
 
 
-    # --- Distribusi Magnitudo dan Kedalaman (Lebar Penuh) ---
-    st.header("Distribusi Magnitudo dan Kedalaman")
-    
-    # Gunakan dua kolom untuk histogram di bawah peta
-    col_hist1, col_hist2 = st.columns(2)
+    # ---------------------------------------------
+    # --- Distribusi Cluster (Bar Chart) ---
+    # ---------------------------------------------
+    st.header("2. Distribusi Frekuensi Cluster")
+    st.markdown("Jumlah titik data yang termasuk dalam setiap grup clustering.")
 
-    with col_hist1:
-        # Visualisasi Distribusi Magnitudo (mag)
-        if 'mag' in filtered_df.columns:
-            st.subheader("Histogram Magnitudo (mag)")
-            fig_mag = px.histogram(
-                filtered_df.dropna(subset=['mag']),
-                x="mag",
-                nbins=20,
-                title="Distribusi Magnitudo Gempa"
-            )
-            st.plotly_chart(fig_mag, use_container_width=True)
-        else:
-            st.warning("Kolom 'mag' tidak ditemukan.")
+    col_bar1, col_bar2 = st.columns(2)
 
-    with col_hist2:
-        # Visualisasi Distribusi Kedalaman (depth)
-        if 'depth' in filtered_df.columns:
-            st.subheader("Histogram Kedalaman (depth)")
-            fig_depth = px.histogram(
-                filtered_df.dropna(subset=['depth']),
-                x="depth",
-                nbins=20,
-                title="Distribusi Kedalaman Gempa"
+    with col_bar1:
+        # Visualisasi Distribusi 'cluster' (K-Means)
+        if 'cluster' in filtered_df.columns:
+            st.subheader("Hitungan per Cluster (K-Means)")
+            # Hitung frekuensi dan reset index untuk Plotly
+            cluster_counts = filtered_df['cluster'].value_counts().reset_index()
+            cluster_counts.columns = ['Cluster', 'Count']
+            
+            fig_cluster = px.bar(
+                cluster_counts,
+                x='Cluster',
+                y='Count',
+                title="Distribusi Cluster K-Means"
             )
-            st.plotly_chart(fig_depth, use_container_width=True)
+            st.plotly_chart(fig_cluster, use_container_width=True)
         else:
-            st.warning("Kolom 'depth' tidak ditemukan.")
+            st.warning("Kolom 'cluster' tidak ditemukan.")
+
+    with col_bar2:
+        # Visualisasi Distribusi 'dbscan_cluster' (DBSCAN)
+        if 'dbscan_cluster' in filtered_df.columns:
+            st.subheader("Hitungan per Cluster (DBSCAN)")
+            # Hitung frekuensi dan reset index untuk Plotly
+            dbscan_counts = filtered_df['dbscan_cluster'].value_counts().reset_index()
+            dbscan_counts.columns = ['DBSCAN_Cluster', 'Count']
+            
+            fig_dbscan = px.bar(
+                dbscan_counts,
+                x='DBSCAN_Cluster',
+                y='Count',
+                title="Distribusi Cluster DBSCAN"
+            )
+            st.plotly_chart(fig_dbscan, use_container_width=True)
+        else:
+            st.warning("Kolom 'dbscan_cluster' tidak ditemukan.")
 
 
     # --- Tampilan Data Mentah ---
-    st.header("Data Gempa (Tabel)")
+    st.header("3. Data Mentah (Tabel)")
     st.markdown("Tampilan data yang telah difilter.")
     st.dataframe(filtered_df)
 
