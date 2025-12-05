@@ -5,7 +5,7 @@ import plotly.express as px
 # Konfigurasi halaman
 st.set_page_config(
     page_title="Visualisasi Data Gempa Bumi",
-    layout="wide",
+    layout="wide", # Pastikan layout wide untuk memanfaatkan lebar layar
     initial_sidebar_state="expanded"
 )
 
@@ -63,19 +63,20 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
     st.sidebar.markdown(f"**Total Data Awal:** {len(df)}")
 
     # ---------------------------------------------
-    # --- Peta Persebaran Gempa (Lebar Penuh) ---
+    # --- Peta Persebaran Gempa (DIUBAH KE SCATTER X-Y) ---
     # ---------------------------------------------
     
-    st.header("1. Peta Persebaran Gempa")
-    st.markdown("Setiap titik mewakili lokasi gempa dan diwarnai berdasarkan hasil DBSCAN Cluster.")
+    st.header("1. Visualisasi Hubungan Cluster (Plot X-Y)")
+    st.warning("Peringatan: Koordinat Latitude/Longitude pada file ini tampaknya telah **dinormalisasi/diskala**. Plot ini menampilkan hubungan spasial antar cluster pada bidang Kartesian (X-Y) standar, bukan pada peta dunia yang sebenarnya.")
     
     color_col = 'dbscan_cluster' if 'dbscan_cluster' in filtered_df.columns else 'cluster'
     
-    fig_map = px.scatter_mapbox(
+    # MENGGANTI px.scatter_mapbox menjadi px.scatter
+    fig_map = px.scatter(
         filtered_df,
-        lat="latitude",
-        lon="longitude",
-        color=color_col, # Warna berdasarkan dbscan_cluster
+        x="longitude",  # Longitude menjadi sumbu X
+        y="latitude",   # Latitude menjadi sumbu Y
+        color=color_col,
         hover_name="cluster",
         hover_data={
             "latitude": ':.2f',
@@ -83,13 +84,16 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
             "cluster": True,
             "dbscan_cluster": True
         },
-        zoom=2,
         height=800,
-        title="Persebaran Lokasi Gempa Berdasarkan Cluster"
+        title="Visualisasi Distribusi Cluster Berdasarkan Koordinat Skala"
     )
 
-    fig_map.update_layout(mapbox_style="carto-positron")
-    fig_map.update_layout(margin={"r":0,"t":30,"l":0,"b":0})
+    # Menyesuaikan label sumbu karena ini bukan lagi peta Mapbox
+    fig_map.update_layout(
+        margin={"r":0,"t":30,"l":0,"b":0},
+        xaxis_title="Longitude (Skala/Normalized)",
+        yaxis_title="Latitude (Skala/Normalized)"
+    )
 
     st.plotly_chart(fig_map, use_container_width=True)
 
@@ -106,7 +110,6 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
         # Visualisasi Distribusi 'cluster' (K-Means)
         if 'cluster' in filtered_df.columns:
             st.subheader("Hitungan per Cluster (K-Means)")
-            # Hitung frekuensi dan reset index untuk Plotly
             cluster_counts = filtered_df['cluster'].value_counts().reset_index()
             cluster_counts.columns = ['Cluster', 'Count']
             
@@ -124,7 +127,6 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
         # Visualisasi Distribusi 'dbscan_cluster' (DBSCAN)
         if 'dbscan_cluster' in filtered_df.columns:
             st.subheader("Hitungan per Cluster (DBSCAN)")
-            # Hitung frekuensi dan reset index untuk Plotly
             dbscan_counts = filtered_df['dbscan_cluster'].value_counts().reset_index()
             dbscan_counts.columns = ['DBSCAN_Cluster', 'Count']
             
