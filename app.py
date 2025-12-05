@@ -67,7 +67,7 @@ if not df.empty and all(col in df.columns for col in ['latitude', 'longitude']):
     # ---------------------------------------------
     
     st.header("1. Visualisasi Hubungan Cluster (Plot X-Y)")
-    st.warning("Peringatan: Koordinat Latitude/Longitude pada file ini tampaknya telah **dinormalisasi/diskala**. Plot ini menampilkan hubungan spasial antar cluster pada bidang Kartesian (X-Y) standar, bukan pada peta dunia yang sebenarnya.")
+   
     
     color_col = 'dbscan_cluster' if 'dbscan_cluster' in filtered_df.columns else 'cluster'
     
