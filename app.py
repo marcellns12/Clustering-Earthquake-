@@ -9,7 +9,7 @@ st.set_page_config(page_title="DBSCAN Clustering Gempa", layout="wide")
 st.title("DBSCAN Clustering - Dataset Gempa")
 
 # Path untuk menyimpan model
-MODEL_PATH = "dbscan_model.pkl"
+MODEL_PATH = "model_clustering_optimal.pkl"
 
 # Sidebar: parameter DBSCAN
 st.sidebar.header("Parameter DBSCAN")
